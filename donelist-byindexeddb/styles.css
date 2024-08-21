@@ -1,0 +1,77 @@
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  color: rgb(63, 56, 68);
+}
+
+body {
+  font: 1rem/1.5rem sans-serif;
+}
+
+button {
+  appearance: none;
+  background-color: transparent;
+  border: none;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+
+  li {
+    display: grid;
+    grid-template-areas: "donecheck title remove";
+    grid-template-columns: 2rem 1fr 2rem;
+    align-items: center;
+    border-bottom: 1px solid gainsboro;
+    padding: 0.75rem 1.5rem;
+
+    &:hover {
+      background-color: ghostwhite;
+
+      .removeBtn {
+        grid-area: remove;
+        width: 1rem;
+        height: 1rem;
+        background-color: crimson;
+        border-radius: 50%;
+      }
+    }
+
+    p {
+      grid-area: title;
+    }
+
+    .doneBtn {
+      grid-area: donecheck;
+      width: 1rem;
+      height: 1rem;
+      background-color: snow;
+      border: 2px solid gainsboro;
+      border-radius: 50%;
+      transition: background-color 300ms ease;
+    }
+
+    .done-task {
+      background-color: mediumseagreen;
+      border-color: forestgreen;
+    }
+  }
+}
+
+form {
+  width: 100%;
+  padding-bottom: 5rem;
+
+  .new-task {
+    padding: 0.75rem 1.5rem;
+    width: 100%;
+    border: none;
+    font: inherit;
+
+    &:focus {
+      outline: none;
+    }
+  }
+}
