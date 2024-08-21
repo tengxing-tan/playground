@@ -27,6 +27,14 @@ button {
     border-bottom: 1px solid gainsboro;
     padding: 0.75rem 1.5rem;
 
+    &:has(.done-task) {
+      background-color: honeydew;
+
+      p {
+        color: darkolivegreen;
+      }
+    }
+
     &:hover {
       background-color: ghostwhite;
 
