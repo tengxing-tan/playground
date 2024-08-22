@@ -3,24 +3,32 @@
   const TASKLIST = "tasklist";
 
   document.addEventListener("DOMContentLoaded", (e) => {
-    initIndexedDB();
+    const dbRequest = initIndexedDB();
+    dbRequest.onsuccess = () => {
+      db = dbRequest.result;
+      getTasks(appendToTaskList);
+    };
 
     document.querySelector("form").addEventListener("submit", (e) => {
       e.preventDefault();
-      create();
+      const data = {
+        taskid: Date.now(),
+        title: document.querySelector("#taskTitle").value,
+        isDone: false,
+      };
+      createTask(data).onsuccess = () => {
+        appendToTaskList(data);
+        clearForm();
+      };
     });
   });
 
   function initIndexedDB() {
+    // Step: open db request, error? if no structure (upgrade)? success?
     const request = window.indexedDB.open("DoneListDB", 1);
 
     request.onerror = (event) => {
       console.error("Handle error!");
-    };
-
-    request.onsuccess = () => {
-      db = request.result;
-      read();
     };
 
     request.onupgradeneeded = (event) => {
@@ -33,9 +41,11 @@
       objectStore.createIndex("title", "title", { unique: false });
       objectStore.createIndex("isDone", "isDone", { unique: false });
     };
+
+    return request;
   }
 
-  function read() {
+  function getTasks(handleRetrievedTask) {
     db
       .transaction(TASKLIST, "readonly")
       .objectStore(TASKLIST)
@@ -43,39 +53,31 @@
       const cursor = event.target.result;
 
       if (!cursor) {
-        console.log("end of list");
         return;
       }
 
-      appendToTaskList(cursor.value);
-      console.log(cursor.value);
+      handleRetrievedTask(cursor.value);
       cursor.continue();
     };
   }
 
-  function create() {
-    const data = {
-      taskid: Date.now(),
-      title: document.querySelector("#taskTitle").value,
-      isDone: false,
-    };
-    const store = db.transaction(TASKLIST, "readwrite").objectStore(TASKLIST);
-    store.add(data).onsuccess = (event) => {
-      appendToTaskList(data);
-      clearForm();
-    };
+  function createTask(data) {
+    return db
+      .transaction(TASKLIST, "readwrite")
+      .objectStore(TASKLIST)
+      .add(data);
   }
 
   function deleteTask(event) {
-    const dataTask = event.target.getAttribute("data-task");
+    const taskid = Number(event.target.getAttribute("data-task"));
 
-    const transaction = db.transaction(TASKLIST, "readwrite");
-    transaction.objectStore(TASKLIST).delete(Number(dataTask)).onsuccess =
-      () => {
-        document
-          .querySelector("#tasklist")
-          .removeChild(event.target.parentNode);
-      };
+    const delReq = db
+      .transaction(TASKLIST, "readwrite")
+      .objectStore(TASKLIST)
+      .delete(taskid);
+    delReq.onsuccess = () => {
+      document.querySelector("#tasklist").removeChild(event.target.parentNode);
+    };
   }
 
   function markDone(event) {
@@ -84,12 +86,13 @@
     const objectStore = db
       .transaction(TASKLIST, "readwrite")
       .objectStore(TASKLIST);
+
     objectStore.get(Number(dataTask)).onsuccess = (succEvent) => {
       const updated = succEvent.target.result;
-      updated.isDone = toggle(updated.isDone);
+      updated.isDone = !updated.isDone;
       objectStore.put(updated);
 
-      event.target.classList.toggle('done-task')
+      event.target.classList.toggle("done-task");
     };
   }
 
@@ -99,26 +102,34 @@
     taskTitle.textContent = data.title;
     taskEl.appendChild(taskTitle);
 
-    const removeBtn = document.createElement("button");
-    removeBtn.classList = "removeBtn";
-    removeBtn.setAttribute("data-task", data.taskid);
-    removeBtn.addEventListener("click", deleteTask);
-    taskEl.appendChild(removeBtn);
+    const taskButtons = initActionButtons([
+      {
+        classList: "removeBtn ",
+        taskid: data.taskid,
+        click: deleteTask,
+      },
+      {
+        classList: "doneBtn " + (data.isDone && "done-task"),
+        taskid: data.taskid,
+        click: markDone,
+      },
+    ]);
 
-    const doneBtn = document.createElement("button");
-    doneBtn.classList = "doneBtn " + (data.isDone && "done-task");
-    doneBtn.setAttribute("data-task", data.taskid);
-    doneBtn.addEventListener("click", markDone);
-    taskEl.appendChild(doneBtn);
-
+    taskButtons.forEach((button) => taskEl.appendChild(button));
     document.querySelector("#tasklist").appendChild(taskEl);
+  }
+
+  function initActionButtons(props) {
+    return props.map((prop) => {
+      const button = document.createElement("button");
+      button.classList = prop.classList;
+      button.setAttribute("data-task", prop.taskid);
+      button.addEventListener("click", (e) => prop.click(e));
+      return button;
+    });
   }
 
   function clearForm() {
     document.querySelectorAll("input").forEach((el) => (el.value = ""));
-  }
-
-  function toggle(value) {
-    return !value;
   }
 })();
